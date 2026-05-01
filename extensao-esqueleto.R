@@ -15,37 +15,31 @@
 
 # Tarefa 1. Leitura do banco de dados do SINASC 2015  com 3017668 linhas e 61 colunas
 
-
-# Tarefa 2. Reduzir dados_sinasc apenas para as colunas que serão utilizadas, nomeando este novo banco de dados como dados_sinasc_1
-# as colunas serão 1, 4, 5, 6, 7, 12, 13, 14, 15, 19, 21, 22, 23, 24, 35, 38, 44, 46, 48, 59, 60, 61
-# nomes das respectivas variáveis: CONTADOR, CODMUNNASC, LOCNASC, IDADEMAE, ESTCIVMAE, CODMUNRES, GESTACAO, GRAVIDEZ, PARTO,
-# SEXO, APGAR5, RACACOR, PESO, IDANOMAL, ESCMAE2010, RACACORMAE, SEMAGESTAC, CONSPRENAT, TPAPRESENT, TPROBSON, PARIDADE, KOTELCHUCK
+dados_sinasc <- read.csv("SINASC_2015.csv", sep = ";", header = TRUE)
 
 
-# Tarefa 3. Reduzir dados_sinasc_1 apenas para o estado que o aluno irá trabalhar (utilizar os dois primeiros dígitos de CODMUNRES), nomeando este novo banco de dados como dados_sinasc_2
-# Códigos das UF: 11: RO, 12: AC, 13: AM, 14: RR, 15: PA, 16: AP, 17: TO, 21: MA, 22: PI, 23: CE, 24: RN
-# 25: PB, 26: PE, 27: AL, 28: SE, 29: BA, 31: MG, 32: ES, 33: RJ, 35: SP, 41: PR, 42: SC, 43: RS
-# 50: MS, 51: MT, 52: GO, 53: DF 
+# Tarefa 2:
+dados_sinasc_1 = dados_sinasc[, c(1, 4, 5, 6, 7, 12, 13, 14, 15, 19, 21, 22, 23, 24, 35, 38, 44, 46, 48, 59, 60)]
+
+# Tarefa 3:
+UF = substr(as.character(dados_sinasc_1$CODMUNNASC), 1, 2)
+dados_sinasc_2 = dados_sinasc_1[UF == "15", ]
+
+write.csv(dados_sinasc_2, "dados_sinasc_2.csv", row.names = FALSE)
 
 
 
 dados_sinasc_2 <- read_csv("dados_sinasc_2.csv")
-# Tarefa 4. Verificar em dados_sinasc_2 a frequência das categorias das seguintes variáveis: LOCNASC, ESTCIVMAE, GESTACAO, GRAVIDEZ, PARTO,
-# SEXO, APGAR5, RACACOR, IDANOMAL, ESCMAE2010, RACACORMAE, TPAPRESENT, TPROBSON, PARIDADE, KOTELCHUCK
-# 1. Criando a lista de variáveis para conferir
+# Tarefa 4:
 vars_frequencia <- c("LOCNASC", "ESTCIVMAE", "GESTACAO", "GRAVIDEZ", "PARTO", 
                      "SEXO", "APGAR5", "RACACOR", "IDANOMAL", "ESCMAE2010", 
                      "RACACORMAE", "TPAPRESENT", "TPROBSON", "PARIDADE", "KOTELCHUCK")
 
-# 2. Comando para mostrar a frequência de cada uma de uma vez no Console
 lapply(dados_sinasc_2[, vars_frequencia], table)
 
-# Tarefa 5. Atribuir para cada variável de dados_sinasc_2 como sendo NA a categoria de "Não informado ou Ignorado", geralmente com código 9
-# KOTELCHUCK = 9 significa "não informado"   TPROBSON = 11 significa "não classificado por falta de informação"
-# veja o dicionário do SINASC para identificar qual o código das categorias de cada variável
-# Em variáveis quantitativas como IDADEMAE, APGAR5 e PESO e SEMAGESTAC verificar se existem valores como 99 para NA
 
-#Limpeza (Tarefa 5) ---
+
+# Tarefa 5:
 dados_sinasc_2$TPROBSON[dados_sinasc_2$TPROBSON == 11] <- NA
 dados_sinasc_2$APGAR5[dados_sinasc_2$APGAR5 == 99] <- NA
 dados_sinasc_2$SEXO[dados_sinasc_2$SEXO == 9] <- NA
@@ -112,3 +106,73 @@ dados_sinasc_2$PERIG = factor(dados_sinasc_2$PERIG, levels = c("Não", "Sim"))
 dados_sinasc_2$ESTCIV = ifelse(dados_sinasc_2$ESTCIVMAE %in% c("Solteira", "Viúva", "Separada judicialmente/divorciada"), "Sem companheiro",
                                ifelse(dados_sinasc_2$ESTCIVMAE %in% c("Casada", "União estável"), "Com companheiro", NA))
 dados_sinasc_2$ESTCIV = factor(dados_sinasc_2$ESTCIV, levels = c("Sem companheiro","Com companheiro"))
+
+
+
+#Tarefa 8:
+
+tabela_pig <- read.csv("Tabela_PIG_Brasil.csv", header = TRUE, sep = ";", encoding = "UTF-8")
+
+colnames(tabela_pig)[1] <- "SEMAGESTAC"
+
+tabela_pig$SEXO <- factor(tabela_pig$SEXO, levels = c("Masculino", "Feminino"))
+
+dados_sinasc_2 <- merge(dados_sinasc_2, tabela_pig, by = c("SEMAGESTAC", "SEXO"), all.x = TRUE)
+
+
+dados_sinasc_2$F_PIG <- ifelse(dados_sinasc_2$GRAVIDEZ != 1, NA, 
+                        ifelse(is.na(dados_sinasc_2$PESO) | is.na(dados_sinasc_2$PESO_P10), NA,
+                        ifelse(dados_sinasc_2$PESO < dados_sinasc_2$PESO_P10, "PIG",
+                        ifelse(dados_sinasc_2$PESO <= dados_sinasc_2$PESO_P90, "AIG", "GIG"))))
+
+
+dados_sinasc_2$F_PIG <- factor(dados_sinasc_2$F_PIG, levels = c("PIG", "AIG", "GIG"))
+
+
+#Tarefas 9 e 10:
+base <- data.frame(CODMUNRES = sort(unique(dados_sinasc_2$CODMUNRES)))
+
+TN <- as.data.frame(table(factor(dados_sinasc_2$CODMUNRES, levels = base$CODMUNRES)))
+names(TN) <- c("CODMUNRES", "TN")
+base <- merge(base, TN, by = "CODMUNRES", all.x = TRUE)
+
+
+
+tab_sexo <- table(dados_sinasc_2$CODMUNRES, factor(dados_sinasc_2$SEXO, levels = c("Feminino", "Masculino")))
+df_sexo <- as.data.frame.matrix(tab_sexo)
+names(df_sexo) <- c("TRSEXO_F", "TRSEXO_M")
+df_sexo$CODMUNRES <- rownames(df_sexo)
+base <- merge(base, df_sexo[, c("CODMUNRES", "TRSEXO_F")], by = "CODMUNRES", all.x = TRUE)
+
+
+tab_parto <- table(dados_sinasc_2$CODMUNRES, factor(dados_sinasc_2$PARTO, levels = c("Vaginal", "Cesáreo")))
+df_parto <- as.data.frame.matrix(tab_parto)
+names(df_parto) <- c("TPV", "TPC")
+df_parto$CODMUNRES <- rownames(df_parto)
+base <- merge(base, df_parto[, c("CODMUNRES", "TPV")], by = "CODMUNRES", all.x = TRUE)
+
+
+media_idade <- aggregate(IDADEMAE ~ CODMUNRES, dados_sinasc_2, mean, na.rm = TRUE)
+names(media_idade)[2] <- "IM_MD"
+base <- merge(base, media_idade, by = "CODMUNRES", all.x = TRUE)
+
+
+linha_estado <- base[1, ]
+linha_estado[1, ] <- NA
+linha_estado$CODMUNRES <- "15" 
+linha_estado$TN <- sum(base$TN, na.rm = TRUE)
+linha_estado$TRSEXO_F <- sum(base$TRSEXO_F, na.rm = TRUE)
+linha_estado$TPV <- sum(base$TPV, na.rm = TRUE)
+linha_estado$IM_MD <- round(mean(dados_sinasc_2$IDADEMAE, na.rm = TRUE), 2)
+
+
+SINASC_PA <- rbind(linha_estado, base)
+SINASC_PA$NIVEL <- c("ESTADO", rep("MUNICIPIO", nrow(base)))
+SINASC_PA$ANO <- 2015
+
+write.csv(SINASC_PA, "SINASC_PA.csv", row.names = FALSE)
+
+
+# Tarefa 11:
+write.csv(SINASC_PA, "SINASC_PA.csv", row.names = FALSE)
+
