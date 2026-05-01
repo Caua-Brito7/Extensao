@@ -4,8 +4,6 @@
 # Enviar o script esqueleto para o repositório REMOTO com o nome extensao-esqueleto.R
 
 # Para realizar as tarefas da ETAPA 1, ABRIR ANTES uma branch de nome SINASC no main de Extensao e ir para ela
-# Após os alunos concluírem a ETAPA 1 a professora orientará fazer o merge into main e depois abrir outro branch. Aguarde...
-
 
 ####################################
 # ETAPA 1: BANCO DE DADOS DO SINASC
