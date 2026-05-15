@@ -1,0 +1,82 @@
+library(readr)
+idade_sexo <- read_delim("idade_sexo.csv", 
+                         delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(idade_sexo)
+
+library(readr)
+idade <- read_delim("idade.csv", delim = ";", 
+                    escape_double = FALSE, trim_ws = TRUE)
+View(idade)
+
+library(readr)
+total_sexo <- read_delim("total_sexo.csv", 
+                         delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(total_sexo)
+
+library(readr)
+estimada <- read_delim("estimada.csv", delim = ";", 
+                       escape_double = FALSE, trim_ws = TRUE)
+View(estimada)
+
+# 1. LIMPEZA E PADRONIZAÇÃO DOS CÓDIGOS (6 DÍGITOS)
+# ==============================================================================
+
+# Ajustando a coluna CODMUNRES em todas as tabelas para o padrão de 6 dígitos
+estimada$CODMUNRES   <- substr(as.character(estimada$CODMUNRES), 1, 6)
+total_sexo$CODMUNRES <- substr(as.character(total_sexo$CODMUNRES), 1, 6)
+idade_sexo$CODMUNRES <- substr(as.character(idade_sexo$CODMUNRES), 1, 6)
+
+# Criando a base mestre apenas com municípios do Pará (Iniciam com 15)
+base_mun <- data.frame(CODMUNRES = unique(estimada$CODMUNRES))
+base_mun <- base_mun[nchar(base_mun$CODMUNRES) == 6 & substr(base_mun$CODMUNRES, 1, 2) == "15", , drop = FALSE]
+
+# ==============================================================================
+# 2. EXTRAÇÃO DAS 10 VARIÁVEIS (ETAPA 3)
+# ==============================================================================
+
+# --- Variáveis de Totais ---
+v4 <- estimada[, c("CODMUNRES", "POPRE_T")]
+v5_7 <- total_sexo[, c("CODMUNRES", "POPRC_T", "POPRC_M", "POPRC_F")]
+
+# --- Grupos de Idade (Usando F_IDADE, POP e POPF da tabela 'idade_sexo') ---
+f_15_49 <- c("15 a 19 anos", "20 a 24 anos", "25 a 29 anos", "30 a 34 anos", "35 a 39 anos", "40 a 44 anos", "45 a 49 anos")
+f_inf_15 <- c("0 a 4 anos", "5 a 9 anos", "10 a 14 anos")
+
+# Variáveis Totais por Idade (Coluna POP)
+v8  <- aggregate(POP ~ CODMUNRES, data = idade_sexo[idade_sexo$F_IDADE %in% f_inf_15, ], sum); names(v8)[2] <- "POPRC_15"
+v9  <- aggregate(POP ~ CODMUNRES, data = idade_sexo[idade_sexo$F_IDADE %in% f_15_49, ], sum); names(v9)[2] <- "POPRC_15_49"
+v10 <- aggregate(POP ~ CODMUNRES, data = idade_sexo[!(idade_sexo$F_IDADE %in% c("Total", f_inf_15, f_15_49)), ], sum); names(v10)[2] <- "POPRC_50"
+
+# Variáveis Femininas por Idade (Coluna POPF)
+v11 <- aggregate(POPF ~ CODMUNRES, data = idade_sexo[idade_sexo$F_IDADE %in% f_inf_15, ], sum); names(v11)[2] <- "POPRC_F_15"
+v12 <- aggregate(POPF ~ CODMUNRES, data = idade_sexo[idade_sexo$F_IDADE %in% f_15_49, ], sum); names(v12)[2] <- "POPRC_F_15_49"
+v13 <- aggregate(POPF ~ CODMUNRES, data = idade_sexo[!(idade_sexo$F_IDADE %in% c("Total", f_inf_15, f_15_49)), ], sum); names(v13)[2] <- "POPRC_F_50"
+
+# ==============================================================================
+# 3. UNIÃO FINAL, TOTAL UF E EXPORTAÇÃO
+# ==============================================================================
+
+# Unindo todas as variáveis na base de municípios do Pará
+L <- list(base_mun, v4, v5_7, v8, v9, v10, v11, v12, v13)
+SIDRA_PA <- Reduce(function(x, y) merge(x, y, by="CODMUNRES", all.x=TRUE), L)
+SIDRA_PA[is.na(SIDRA_PA)] <- 0
+
+# Criar a linha do Estado (UF 15)
+linha_uf <- SIDRA_PA[1, ]
+linha_uf$NIVEL <- "UF"; linha_uf$CODMUNRES <- "15"
+cols_pop <- names(SIDRA_PA)[grepl("POP", names(SIDRA_PA))]
+linha_uf[cols_pop] <- colSums(SIDRA_PA[cols_pop])
+
+# Configurar nível dos municípios e juntar tudo
+SIDRA_PA$NIVEL <- "MUNICIPIO"
+FINAL <- rbind(linha_uf, SIDRA_PA)
+FINAL$ANO <- 2015
+
+# Reordenar colunas conforme a Tabela da Tarefa
+FINAL <- FINAL[, c("ANO", "NIVEL", "CODMUNRES", "POPRE_T", "POPRC_T", "POPRC_M", "POPRC_F", 
+                   "POPRC_15", "POPRC_15_49", "POPRC_50", "POPRC_F_15", "POPRC_F_15_49", "POPRC_F_50")]
+
+# Exportar
+
+View(FINAL)
+write.csv(FINAL, "SIDRA_PA_COMPLETO.csv", row.names = FALSE)
