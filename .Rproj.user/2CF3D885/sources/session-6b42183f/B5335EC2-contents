@@ -44,3 +44,94 @@ SINISA_UF <- SINISA_UF[, c("ANO", "NIVEL", "CODMUNRES", "POPR_RA", "POPR_RE")]
 # 7. Atualizar a visualização na tela
 View(SINISA_UF)
 
+
+
+
+
+
+
+
+
+
+
+
+
+_______________________________________________________
+
+
+#Tarefa 3:
+
+library(readr)
+IDHM_2010_municípios_Atlas_Brasil <- read_delim("IDHM - 2010 - municípios - Atlas Brasil.csv", 
+                                                delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(IDHM_2010_municípios_Atlas_Brasil)
+
+
+
+library(readr)
+IDHM_2010_CENSO_e_2015_PNAD_total_e_por_sexo_UF_Atlas_Brasil <- read_delim("IDHM - 2010 (CENSO) e 2015 (PNAD) - total e por sexo - UF - Atlas Brasil.csv", 
+                                                                           delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(IDHM_2010_CENSO_e_2015_PNAD_total_e_por_sexo_UF_Atlas_Brasil)
+
+
+library(readr)
+códigos_dos_municípios_2010 <- read_delim("códigos dos municípios - 2010.csv", 
+                                          delim = ";", escape_double = FALSE, trim_ws = TRUE)
+View(códigos_dos_municípios_2010)
+
+codigos_munic <- códigos_dos_municípios_2010
+idhm_munic    <- IDHM_2010_municípios_Atlas_Brasil
+idhm_uf       <- IDHM_2010_CENSO_e_2015_PNAD_total_e_por_sexo_UF_Atlas_Brasil
+
+rm(códigos_dos_municípios_2010, idhm_uf, IDHM_2010_CENSO_e_2015_PNAD_total_e_por_sexo_UF_Atlas_Brasil, IDHM_2010_municípios_Atlas_Brasil, idhm_munic_completo)
+
+
+idhm_munic$município_limpo <- substr(idhm_munic$município, 1, nchar(idhm_munic$município) - 5)
+
+idhm_munic_completo <- merge(idhm_munic, codigos_munic, by.x = "município_limpo", by.y = "município")
+
+
+# 1. Filtrar apenas o estado do Pará (Municípios onde o CODMUNRES começa com "15")
+atlas_pa <- idhm_munic_completo[substr(idhm_munic_completo$CODMUNRES, 1, 2) == "15", ]
+
+# 2. Criar as colunas fixas exigidas pelo exercício
+atlas_pa$ANO <- 2010
+atlas_pa$NIVEL <- "MUNICIPIO"
+
+# 3. Criar a tabela final selecionando e renomeando as 7 colunas exatas da professora
+ATLAS_UF <- data.frame(
+  ANO       = atlas_pa$ANO,
+  NIVEL     = atlas_pa$NIVEL,
+  CODMUNRES = atlas_pa$CODMUNRES,
+  IDHM_A    = atlas_pa$IDHM_2010,
+  IDHM_CA   = atlas_pa$...3,       # Componente de Longevidade/Educação
+  IDHM_CA_M = atlas_pa$...4,       # Componente Masculino
+  IDHM_CA_F = atlas_pa$...5        # Componente Feminino
+)
+
+# 4. Salvar o arquivo CSV final que você vai enviar no Git
+
+
+# 5. Abrir na tela para ver o resultado limpo com as 7 colunas
+View(ATLAS_UF)
+
+
+# 2. Aplicando a regra da professora: Cortar os 5 últimos caracteres de "(UF)"
+# Como vimos no seu console, a coluna de texto se chama 'municipio'
+idhm_munic$município_limpo <- substr(idhm_munic$município, 1, nchar(idhm_munic$município) - 5)
+
+# 3. Fazendo o Cruzamento (Merge) para trazer a coluna CODMUNRES para o Atlas
+# Cruzamos o nome limpo do Atlas com a coluna 'municipio' da tabela de códigos
+idhm_munic_completo <- merge(idhm_munic, códigos_dos_municípios_2010, by.x = "município_limpo", by.y = "município")
+View(idhm_munic_completo)
+
+
+# Passo 1: Fazer o cruzamento apontando estritamente para a tabela certa do IBGE
+# (Aquela que no seu Environment tem apenas 3 variáveis)
+idhm_munic_completo <- merge(idhm_munic, codigos_munic, by.x = "município_limpo", by.y = "município")
+
+# Passo 2: Filtrar o Pará a partir desse cruzamento limpo
+atlas_pa <- idhm_munic_completo[substr(idhm_munic_completo$CODMUNRES, 1, 2) == "15", ]
+
+# Passo 3: Abrir o atlas_pa para tirarmos a prova real
+View(atlas_pa)
